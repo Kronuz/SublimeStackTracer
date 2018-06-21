@@ -7,11 +7,11 @@ Copyright (c) 2017-2018, Germán Méndez. Bravo (Kronuz). All Rights Reserved.
 """
 from __future__ import absolute_import, print_function
 
-VERSION = "1.0.0"
+VERSION = "1.0.1"
 
 import sublime
 
-from .stacktracer import Stacktracer
+from .stacktraces import StackTraces
 
 
 def plugin_loaded():
@@ -24,7 +24,7 @@ def plugin_loaded():
                 pass
     except NameError:
         pass
-    tracer = Stacktracer(traceback_path='/tmp/SublimeStackTracer{ext}')
+    tracer = StackTraces(traceback_path='/tmp/SublimeStackTracer{ext}', traceback_interval=5)
     tracer.start()
 
 

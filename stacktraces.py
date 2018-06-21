@@ -1,23 +1,28 @@
 # -*- coding: utf-8 -*-
 """
-Stack tracer for multi-threaded applications.
+Stack and stats tracer for multi-threaded applications.
 
-Copyright (C) 2017 German M. Bravo (Kronuz)
+Periodically dump stack traces and stats of all active threads of the
+running process into a given file in intervals of time.
+
+Copyright (c) 2017-2018 Germán Méndez Bravo (Kronuz)
 
 Based on code and ideas from:
 [http://code.activestate.com/recipes/577334-how-to-debug-deadlocked-multi-threaded-programs/]
 [https://www.nylas.com/blog/performance]
 
 Usage:
-    from stacktracer import Stacktracer
-    tracer = Stacktracer('/tmp/stacktracer{ext}', traceback_interval=5, stats_interval=10)
+    from stacktraces import StackTraces
+    tracer = StackTraces('/tmp/stacktraces{ext}', traceback_interval=5, stats_interval=10)
     tracer.start()
-
-    ....
-
+    # Do something with multi-threading here...
     tracer.stop()
 """
 from __future__ import unicode_literals
+
+__version__ = '0.1.0'
+__author__ = 'Germán Méndez Bravo <german.mb@gmail.com>'
+__all__ = ['StackTraces']
 
 import os
 import sys
@@ -33,7 +38,7 @@ import collections
 MAIN_IDENT = threading.current_thread().ident
 
 
-class Stacktracer(threading.Thread):
+class StackTraces(threading.Thread):
     """
     Periodically dump stack traces and stats of all active threads of the
     running process into a given file in intervals of time.
@@ -41,7 +46,7 @@ class Stacktracer(threading.Thread):
 
     def __init__(self,
             path=None,
-            traceback_path=None, traceback_interval=5,
+            traceback_path=None, traceback_interval=10,
             stats_path=None, stats_interval=600,
             granularity=0.005,
             prefix='',
@@ -121,23 +126,23 @@ class Stacktracer(threading.Thread):
         self._code = []
         self._stack_counts = collections.defaultdict(int)
 
-        threading.Thread.__init__(self, name="StacktracerThread")
+        threading.Thread.__init__(self, name="StackTracesThread")
 
     def run(self):
         while not self._stop_requested.isSet():
             try:
-                self._stacktracer()
+                self._stacktraces()
             except Exception:
                 traceback.print_exc()
             time.sleep(self._granularity)
 
     def start(self):
-        if any(True for t in threading.enumerate() if t.name == 'StacktracerThread'):
+        if any(True for t in threading.enumerate() if t.name == 'StackTracesThread'):
             raise RuntimeWarning("Thread already exists!")
         if self._started_time is None:
             self._started_time = datetime.datetime.now()
             self.setDaemon(True)
-            super(Stacktracer, self).start()
+            super(StackTraces, self).start()
             atexit.register(self._python_exit)
         else:
             raise RuntimeWarning("Already tracing.")
@@ -160,7 +165,7 @@ class Stacktracer(threading.Thread):
         thread = self._threads.get(ident)
         return thread.name if thread else ""
 
-    def _stacktracer(self):
+    def _stacktraces(self):
         self._now = datetime.datetime.now()
 
         traceback = False
@@ -252,7 +257,7 @@ class Stacktracer(threading.Thread):
         stats = '\n'.join(lines) + '\n'
         if reset:
             self.reset()
-        filename = self._get_filename(self._stats_path, self._stats_pattern, '.stacktracer')
+        filename = self._get_filename(self._stats_path, self._stats_pattern, '.stacktraces')
         return filename, stats
 
     def reset(self):
