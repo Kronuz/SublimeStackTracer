@@ -35,19 +35,41 @@ MAIN_IDENT = threading.current_thread().ident
 
 class Stacktracer(threading.Thread):
     """
-    traceback_path and stats_path can either be a directory (ending with '/')
-    or a full path of a pattern: '/traceback/path/{prefix}{pid}__{host}-{time}{ext}'
+    Periodically dump stack traces and stats of all active threads of the
+    running process into a given file in intervals of time.
     """
 
     def __init__(self,
             path=None,
-            traceback_path=None, traceback_interval=10,
+            traceback_path=None, traceback_interval=5,
             stats_path=None, stats_interval=600,
             granularity=0.005,
             prefix='',
-            traceback='html', stats=True):
+            traceback='text', stats=True):
+        """
+        @param path: output path or file pattern
+        @param traceback_path: stack trace output path or file pattern
+        @param traceback_interval: how often to update the trace file (seconds).
+        @param stats_path: stats output path or file pattern
+        @param traceback_interval: how often to update the trace file (seconds).
+        @param granularity: how often are stats collected
+        @param prefix: prefix name
+        @param traceback: enables traceback; can be False, 'text' or 'html'
+        @param stats: enables/disables stats; can be True or False
 
+        traceback_path and stats_path (or path) can either be a directory (ending with '/')
+        or a full path of a pattern: '/traceback/path/{prefix}{pid}__{host}-{time}{ext}'
+
+        * {prefix} - the prefix passed to the constructor of the object
+        * pid      - current process id
+        * {host}   - platform hostname
+        * {time}   - start time
+        * {ext}    - traceback mode extension (txt or html)
+
+        """
         self._prefix = prefix
+        if traceback is True:
+            traceback = 'text'
         if traceback and stats:
             self._granularity = granularity
         elif traceback:
@@ -63,8 +85,8 @@ class Stacktracer(threading.Thread):
         self._threads_time = None
         self._threads_delta = datetime.timedelta(seconds=20)
 
-        traceback_path = traceback_path or path
         self._traceback = None
+        traceback_path = traceback_path or path
         if traceback and traceback_path:
             self._traceback = getattr(self, 'traceback_%s' % traceback, None)
             self._traceback_time = None
@@ -78,8 +100,8 @@ class Stacktracer(threading.Thread):
             except OSError:
                 pass
 
-        stats_path = stats_path or path
         self._stats = None
+        stats_path = stats_path or path
         if stats and stats_path:
             self._stats = self.stats
             self._stats_time = None
@@ -92,6 +114,9 @@ class Stacktracer(threading.Thread):
                 os.makedirs(self._stats_path)
             except OSError:
                 pass
+
+        if not self._traceback and not self._stats:
+            raise TypeError("__init__() missing 1 required argument: 'path'")
 
         self._code = []
         self._stack_counts = collections.defaultdict(int)

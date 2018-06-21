@@ -24,7 +24,7 @@ def plugin_loaded():
                 pass
     except NameError:
         pass
-    tracer = Stacktracer(traceback_path='/tmp/SublimeStackTracer{ext}', traceback_interval=5, traceback='text')
+    tracer = Stacktracer(traceback_path='/tmp/SublimeStackTracer{ext}')
     tracer.start()
 
 
